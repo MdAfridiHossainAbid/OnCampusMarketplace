@@ -27,24 +27,14 @@ const createProduct = async (req, res) => {
 };
 
 // GET /api/products
-// GET /api/products?keyword=book
-// GET /api/products?category=Electronics
-// GET /api/products?minPrice=100&maxPrice=500
-// GET /api/products?keyword=book&category=Books
+// GET /api/products?keyword=book&category=Books&minPrice=100&maxPrice=500
 const getProducts = async (req, res) => {
   try {
     const { keyword, category, minPrice, maxPrice } = req.query;
     const query = {};
 
-    // Keyword search across title + description (uses the text index on Product)
-    if (keyword) {
-      query.$text = { $search: keyword };
-    }
-
-    if (category) {
-      query.category = category;
-    }
-
+    if (keyword) query.$text = { $search: keyword };
+    if (category) query.category = category;
     if (minPrice || maxPrice) {
       query.price = {};
       if (minPrice) query.price.$gte = Number(minPrice);
@@ -58,6 +48,16 @@ const getProducts = async (req, res) => {
     res.status(200).json(products);
   } catch (error) {
     res.status(500).json({ message: 'Could not fetch products', error: error.message });
+  }
+};
+
+// GET /api/products/mine  (protected — seller's own listings, for the manage-products page)
+const getMyProducts = async (req, res) => {
+  try {
+    const products = await Product.find({ sellerId: req.user.id }).sort({ createdAt: -1 });
+    res.status(200).json(products);
+  } catch (error) {
+    res.status(500).json({ message: 'Could not fetch your products', error: error.message });
   }
 };
 
@@ -157,6 +157,7 @@ const updateAvailability = async (req, res) => {
 module.exports = {
   createProduct,
   getProducts,
+  getMyProducts,
   getProductById,
   updateProduct,
   deleteProduct,
